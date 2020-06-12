@@ -2247,39 +2247,45 @@ if ( ! class_exists( 'um\core\Fields' ) ) {
 
 					$original_key = $key;
 
-					if ( $key == 'single_user_password' ) {
-
+					if ( $key == 'single_user_password' ) {  
+					   
 						$key = $original_key;
 
-						$output .= '<div ' . $this->get_atts( $key, $classes, $conditional, $data ) . '>';
+						if( um_account_actions_require_current_password( 'password' ) ){
 
-						if ( isset( $data['label'] ) ) {
-							$output .= $this->field_label( $label, $key, $data );
+							$output .= '<div ' . $this->get_atts( $key, $classes, $conditional, $data ) . '>';
+						
+							if ( isset( $data['label'] ) ) {
+								$output .= $this->field_label( $label, $key, $data );
+							}
+
+							$output .= '<div class="um-field-area">';
+
+							if ( ! empty( $icon ) && isset( $this->field_icons ) && $this->field_icons == 'field' ) {
+
+								$output .= '<div class="um-field-icon"><i class="' . esc_attr( $icon ) . '"></i></div>';
+
+							}
+						
+							$output .= '<input class="' . $this->get_class( $key, $data ) . '" type="' . esc_attr( $input ) . '" name="' . esc_attr( $key . UM()->form()->form_suffix ) . '" id="' . esc_attr( $key . UM()->form()->form_suffix ) . '" value="' . $this->field_value( $key, $default, $data ) . '" placeholder="' . esc_attr( $placeholder ) . '" data-validate="' . esc_attr( $validate ) . '" data-key="' . esc_attr( $key ) . '" />';
+						
+							$output .= '</div>';
+						
+
+							if ( $this->is_error( $key ) ) {
+								$output .= $this->field_error( $this->show_error( $key ) );
+							}else if ( $this->is_notice( $key ) ) {
+								$output .= $this->field_notice( $this->show_notice( $key ) );
+							}
+
+							$output .= '</div>';
+						}else{
+							$output .= '<div></div>';
 						}
-
-						$output .= '<div class="um-field-area">';
-
-						if ( ! empty( $icon ) && isset( $this->field_icons ) && $this->field_icons == 'field' ) {
-
-							$output .= '<div class="um-field-icon"><i class="' . esc_attr( $icon ) . '"></i></div>';
-
-						}
-
-						$output .= '<input class="' . $this->get_class( $key, $data ) . '" type="' . esc_attr( $input ) . '" name="' . esc_attr( $key . UM()->form()->form_suffix ) . '" id="' . esc_attr( $key . UM()->form()->form_suffix ) . '" value="' . $this->field_value( $key, $default, $data ) . '" placeholder="' . esc_attr( $placeholder ) . '" data-validate="' . esc_attr( $validate ) . '" data-key="' . esc_attr( $key ) . '" />
-
-							</div>';
-
-						if ( $this->is_error( $key ) ) {
-							$output .= $this->field_error( $this->show_error( $key ) );
-						}else if ( $this->is_notice( $key ) ) {
-							$output .= $this->field_notice( $this->show_notice( $key ) );
-						}
-
-						$output .= '</div>';
 
 					} else {
 
-						if ( $this->set_mode == 'account' || um_is_core_page( 'account' ) ) {
+						if ( um_account_actions_require_current_password( 'password' ) && ( $this->set_mode == 'account' || um_is_core_page( 'account' ) ) ) {
 
 							$key = 'current_' . $original_key;
 							$output .= '<div ' . $this->get_atts( $key, $classes, $conditional, $data ) . '>';

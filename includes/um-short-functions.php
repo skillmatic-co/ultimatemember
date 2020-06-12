@@ -2855,3 +2855,25 @@ if ( ! function_exists( 'um_is_profile_owner' ) ) {
 		return ( $user_id == um_profile_id() );
 	}
 }
+
+/**
+ * Checks account actions require current password
+ */
+function um_account_actions_require_current_password( $tab_key ){
+	
+	switch( $tab_key ){
+		// Delete Account Tab
+		case 'delete':
+		// Change Password Tab
+		case 'password':
+		// Privacy Tab
+		case 'privacy_erase_data':
+		case 'privacy_download_data':
+		
+			return apply_filters("um_account_{$tab_key}_require_current", true );
+	
+		break;
+	}
+
+	return true;
+}

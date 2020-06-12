@@ -17,16 +17,20 @@ function um_submit_account_errors_hook( $args ) {
 	}
 
 	$user = get_user_by( 'login', um_user( 'user_login' ) );
-
+	
+	
 	if ( isset( $_POST['_um_account_tab'] ) ) {
 		switch ( $_POST['_um_account_tab'] ) {
 			case 'delete': {
-				// delete account
-				if ( strlen(trim( $_POST['single_user_password'] ) ) == 0 ) {
-					UM()->form()->add_error( 'single_user_password', __( 'You must enter your password', 'ultimate-member' ) );
-				} else {
-					if ( ! wp_check_password( $_POST['single_user_password'], $user->data->user_pass, $user->data->ID ) ) {
-						UM()->form()->add_error( 'single_user_password', __( 'This is not your password', 'ultimate-member' ) );
+			   
+				if( um_account_actions_require_current_password( 'delete' ) ){
+					// delete account
+					if ( strlen(trim( $_POST['single_user_password'] ) ) == 0 ) {
+						UM()->form()->add_error( 'single_user_password', __( 'You must enter your password', 'ultimate-member' ) );
+					} else {
+						if ( ! wp_check_password( $_POST['single_user_password'], $user->data->user_pass, $user->data->ID ) ) {
+							UM()->form()->add_error( 'single_user_password', __( 'This is not your password', 'ultimate-member' ) );
+						}
 					}
 				}
 
@@ -37,11 +41,12 @@ function um_submit_account_errors_hook( $args ) {
 
 			case 'password': {
 				// change password
+
 				if ( ( isset( $_POST['current_user_password'] ) && $_POST['current_user_password'] != '' ) ||
 					( isset( $_POST['user_password'] ) && $_POST['user_password'] != '' ) ||
 					( isset( $_POST['confirm_user_password'] ) && $_POST['confirm_user_password'] != '') ) {
 
-					if ( $_POST['current_user_password'] == '' || ! wp_check_password( $_POST['current_user_password'], $user->data->user_pass, $user->data->ID ) ) {
+					if ( um_account_actions_require_current_password( 'password' )&& ( $_POST['current_user_password'] == '' || ! wp_check_password( $_POST['current_user_password'], $user->data->user_pass, $user->data->ID ) ) ) {
 
 						UM()->form()->add_error('current_user_password', __('This is not your password','ultimate-member') );
 						UM()->account()->current_tab = 'password';
@@ -164,7 +169,7 @@ function um_submit_account_details( $args ) {
 	$user_id = um_user('ID');
 
 	//change password account's tab
-	if ( 'password' == $current_tab && $_POST['user_password'] && $_POST['confirm_user_password'] ) {
+	if ( 'password' == $current_tab && ( ( $_POST['user_password'] && $_POST['confirm_user_password'] ) ) ) {
 
 		$changes['user_pass'] = $_POST['user_password'];
 
@@ -186,9 +191,9 @@ function um_submit_account_details( $args ) {
 
 	// delete account
 	$user = get_user_by( 'login', um_user( 'user_login' ) );
-
-	if ( 'delete' == $current_tab && isset( $_POST['single_user_password'] ) &&
-	     wp_check_password( $_POST['single_user_password'], $user->data->user_pass, $user->data->ID ) ) {
+	
+	if (  'delete' == $current_tab && ( ! um_account_actions_require_current_password( 'delete' )  || isset( $_POST['single_user_password'] ) &&
+	     wp_check_password( $_POST['single_user_password'], $user->data->user_pass, $user->data->ID ) ) ) {
 		if ( current_user_can( 'delete_users' ) || um_user( 'can_delete_profile' ) ) {
 			UM()->user()->delete();
 
@@ -415,7 +420,13 @@ add_action( 'um_account_page_hidden_fields', 'um_account_page_hidden_fields' );
  * Before delete account tab content
  */
 function um_before_account_delete() {
-	printf( __( '%s', 'ultimate-member' ), wpautop( htmlspecialchars( UM()->options()->get( 'delete_account_text' ) ) ) );
+
+	if( um_account_actions_require_current_password( 'delete' ) ){
+	    printf( __( '%s', 'ultimate-member' ), wpautop( htmlspecialchars( UM()->options()->get( 'delete_account_text' ) ) ) );
+	}else{
+		printf( __( '%s', 'ultimate-member' ), wpautop( htmlspecialchars( UM()->options()->get( 'delete_account_no_pass_required_text' ) ) ) );
+	
+	}
 }
 add_action( 'um_before_account_delete', 'um_before_account_delete' );
 
@@ -531,16 +542,28 @@ function um_after_account_privacy( $args ) {
 		} elseif ( ! empty( $pending ) && $pending['post_status'] == 'request-confirmed' ) {
 			echo '<p>' . esc_html__( 'The administrator has not yet approved downloading the data. Please expect an email with a link to your data.', 'ultimate-member' ) . '</p>';
 		} else { ?>
+		<?php if( um_account_actions_require_current_password( 'privacy_download_data' ) ) { ?>
+			
 			<label name="um-export-data">
 				<?php esc_html_e( 'Enter your current password to confirm a new export of your personal data.', 'ultimate-member' ); ?>
 			</label>
 			<div class="um-field-area">
+
 				<input id="um-export-data" type="password" placeholder="<?php esc_attr_e( 'Password', 'ultimate-member' )?>">
 				<div class="um-field-error um-export-data">
 					<span class="um-field-arrow"><i class="um-faicon-caret-up"></i></span><?php esc_html_e( 'You must enter a password', 'ultimate-member' ); ?>
 				</div>
 				<div class="um-field-area-response um-export-data"></div>
 			</div>
+		<?php }else{ ?>
+			<label name="um-export-data">
+				<?php esc_html_e( 'To export of your personal data, click the button below.', 'ultimate-member' ); ?>
+			</label>
+			<div class="um-field-area-response um-export-data"></div>
+			
+		<?php } ?>
+			
+
 			<a class="um-request-button um-export-data-button" data-action="um-export-data" href="javascript:void(0);">
 				<?php esc_html_e( 'Request data', 'ultimate-member' ); ?>
 			</a>
@@ -593,6 +616,7 @@ function um_after_account_privacy( $args ) {
 		} elseif ( ! empty( $pending ) && $pending['post_status'] == 'request-confirmed' ) {
 			echo '<p>' . esc_html__( 'The administrator has not yet approved deleting your data. Please expect an email with a link to your data.', 'ultimate-member' ) . '</p>';
 		} else { ?>
+		   <?php if( um_account_actions_require_current_password( 'privacy_erase_data' ) ) { ?>
 			<label name="um-erase-data">
 				<?php esc_html_e( 'Enter your current password to confirm the erasure of your personal data.', 'ultimate-member' ); ?>
 				<input id="um-erase-data" type="password" placeholder="<?php esc_attr_e( 'Password', 'ultimate-member' )?>">
@@ -601,6 +625,15 @@ function um_after_account_privacy( $args ) {
 				</div>
 				<div class="um-field-area-response um-erase-data"></div>
 			</label>
+		   <?php }else{ ?>
+			<label name="um-erase-data">
+				<?php esc_html_e( 'Require erasure of your personal data, click on the button below.', 'ultimate-member' ); ?>
+				<div class="um-field-error um-erase-data">
+					<span class="um-field-arrow"><i class="um-faicon-caret-up"></i></span><?php esc_html_e( 'You must enter a password', 'ultimate-member' ); ?>
+				</div>
+				<div class="um-field-area-response um-erase-data"></div>
+			</label>
+		   <?php } ?>
 			<a class="um-request-button um-erase-data-button" data-action="um-erase-data" href="javascript:void(0);">
 				<?php esc_html_e( 'Request data erase', 'ultimate-member' ); ?>
 			</a>
@@ -620,7 +653,7 @@ function um_request_user_data() {
 	$user = get_userdata( $user_id );
 	$hash = $user->data->user_pass;
 
-	if ( wp_check_password( $password, $hash ) && isset( $_POST['request_action'] ) ) {
+	if ( ( wp_check_password( $password, $hash ) || ( ! um_account_actions_require_current_password( 'privacy_download_data' ) || ! ! um_account_actions_require_current_password( 'privacy_erase_data' ) ) ) && isset( $_POST['request_action'] ) ) {
 
 		if ( $_POST['request_action'] == 'um-export-data' ) {
 			$request_id = wp_create_user_request( $user->data->user_email, 'export_personal_data' );
