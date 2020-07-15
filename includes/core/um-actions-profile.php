@@ -529,8 +529,8 @@ function um_user_edit_profile( $args ) {
 	do_action( 'um_update_profile_full_name', $user_id, $to_update );
 
 	if ( ! isset( $args['is_signup'] ) ) {
-
 		$url = um_user_profile_url( $user_id );
+		$url = apply_filters( 'um_update_profile_redirect_after', $url, $user_id, $args );
 		exit( wp_redirect( um_edit_my_profile_cancel_uri( $url ) ) );
 	}
 }
@@ -588,7 +588,42 @@ add_action( 'um_after_form_fields', 'um_editing_user_id_input' );
 
 
 /**
- * Meta description
+ * Remove Yoast from front end for the Profile page
+ *
+ * @see   https://gist.github.com/amboutwe/1c847f9c706ff6f8c9eca76abea23fb6
+ * @since 2.1.6
+ */
+if ( !function_exists( 'um_profile_remove_wpseo' ) ) {
+
+	function um_profile_remove_wpseo() {
+		if ( um_is_core_page( 'user' ) && um_get_requested_user() ) {
+
+			/* Yoast SEO 12.4 */
+			if ( isset( $GLOBALS['wpseo_front'] ) && is_object( $GLOBALS['wpseo_front'] ) ) {
+				remove_action( 'wp_head', array( $GLOBALS['wpseo_front'], 'head' ), 1 );
+			} elseif ( class_exists( 'WPSEO_Frontend' ) && is_callable( array( 'WPSEO_Frontend', 'get_instance' ) ) ) {
+				remove_action( 'wp_head', array( WPSEO_Frontend::get_instance(), 'head' ), 1 );
+			}
+
+			/* Yoast SEO 14.1 */
+			remove_all_filters( 'wpseo_head' );
+
+			/* Restore title and canonical if broken */
+			if ( ! has_action( 'wp_head', '_wp_render_title_tag' ) ) {
+				add_action( 'wp_head', '_wp_render_title_tag', 18 );
+			}
+			if ( ! has_action( 'wp_head', 'rel_canonical' ) ) {
+				add_action( 'wp_head', 'rel_canonical', 18 );
+			}
+		}
+	}
+
+}
+add_action( 'get_header', 'um_profile_remove_wpseo', 8 );
+
+
+/**
+ * The profile page SEO tags
  * 
  * @see https://ogp.me/ - The Open Graph protocol
  * @see https://developer.twitter.com/en/docs/tweets/optimize-with-cards/overview/summary - The Twitter Summary card
@@ -598,6 +633,20 @@ function um_profile_dynamic_meta_desc() {
 	if ( um_is_core_page( 'user' ) && um_get_requested_user() ) {
 
 		$user_id = um_get_requested_user();
+
+		$privacy = get_user_meta( $user_id, 'profile_privacy', true );
+		if ( $privacy == __( 'Only me', 'ultimate-member' ) || $privacy == 'Only me' ) {
+			return;
+		}
+
+		$noindex = get_user_meta( $user_id, 'profile_noindex', true );
+		if ( ! empty( $noindex ) ) { ?>
+
+			<meta name="robots" content="noindex, nofollow" />
+
+			<?php return;
+		}
+
 		um_fetch_user( $user_id );
 
 		$locale = get_user_locale( $user_id );
@@ -616,21 +665,20 @@ function um_profile_dynamic_meta_desc() {
 		$image = um_get_user_avatar_url( $user_id, $size );
 
 		$person = array(
-				"@context" => "http://schema.org",
-				"@type" => "Person",
-				"name" => esc_attr( $title ),
-				"description" => esc_attr( $description ),
-				"image" => esc_url( $image ),
-				"url" => esc_url( $url )
+			"@context"      => "http://schema.org",
+			"@type"         => "Person",
+			"name"          => esc_attr( $title ),
+			"description"   => esc_attr( $description ),
+			"image"         => esc_url( $image ),
+			"url"           => esc_url( $url ),
 		);
 
 		um_reset_user();
 		?>
 		<!-- START - Ultimate Member profile SEO meta tags -->
 
-		<link rel="canonical" href="<?php echo esc_url( $url ); ?>"/>
 		<link rel="image_src" href="<?php echo esc_url( $image ); ?>"/>
-
+		
 		<meta name="description" content="<?php echo esc_attr( $description ); ?>"/>
 
 		<meta property="og:type" content="profile"/>
@@ -658,7 +706,7 @@ function um_profile_dynamic_meta_desc() {
 		<?php
 	}
 }
-add_action( 'wp_head', 'um_profile_dynamic_meta_desc', 9999 );
+add_action( 'wp_head', 'um_profile_dynamic_meta_desc', 20 );
 
 
 /**

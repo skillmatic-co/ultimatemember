@@ -2332,7 +2332,12 @@ if ( ! class_exists( 'um\core\Fields' ) ) {
 
 						}
 
-						$output .= '<input class="' . $this->get_class( $key, $data ) . '" type="' . esc_attr( $input ) . '" name="' . esc_attr( $key . UM()->form()->form_suffix ) . '" id="' . esc_attr( $key . UM()->form()->form_suffix ) . '" value="' . $this->field_value( $key, $default, $data ) . '" placeholder="' . esc_attr( $placeholder ) . '" data-validate="' . esc_attr( $validate ) . '" data-key="' . esc_attr( $key ) . '" />
+						$name = $key . UM()->form()->form_suffix;
+						if ( $this->set_mode == 'password' && um_is_core_page( 'password-reset' ) ) {
+							$name = $key;
+						}
+
+						$output .= '<input class="' . $this->get_class( $key, $data ) . '" type="' . esc_attr( $input ) . '" name="' . esc_attr( $name ) . '" id="' . esc_attr( $key . UM()->form()->form_suffix ) . '" value="' . $this->field_value( $key, $default, $data ) . '" placeholder="' . esc_attr( $placeholder ) . '" data-validate="' . esc_attr( $validate ) . '" data-key="' . esc_attr( $key ) . '" />
 
 						</div>';
 
@@ -2361,7 +2366,12 @@ if ( ! class_exists( 'um\core\Fields' ) ) {
 
 							}
 
-							$output .= '<input class="' . $this->get_class( $key, $data ) . '" type="' . esc_attr( $input ) . '" name="' . esc_attr( $key . UM()->form()->form_suffix ) . '" id="' . esc_attr( $key . UM()->form()->form_suffix ) . '" value="' . $this->field_value( $key, $default, $data ) . '" placeholder="' . esc_attr( $placeholder ) . '" data-validate="' . esc_attr( $validate ) . '" data-key="' . esc_attr( $key ) . '" />
+							$name = $key . UM()->form()->form_suffix;
+							if ( $this->set_mode == 'password' && um_is_core_page( 'password-reset' ) ) {
+								$name = $key;
+							}
+
+							$output .= '<input class="' . $this->get_class( $key, $data ) . '" type="' . esc_attr( $input ) . '" name="' . esc_attr( $name ) . '" id="' . esc_attr( $key . UM()->form()->form_suffix ) . '" value="' . $this->field_value( $key, $default, $data ) . '" placeholder="' . esc_attr( $placeholder ) . '" data-validate="' . esc_attr( $validate ) . '" data-key="' . esc_attr( $key ) . '" />
 
 								</div>';
 
@@ -3578,8 +3588,13 @@ if ( ! class_exists( 'um\core\Fields' ) ) {
 				case 'shortcode':
 
 					$content = str_replace( '{profile_id}', um_profile_id(), $content );
+					if ( version_compare( get_bloginfo('version'),'5.4', '<' ) ) {
+						$content = do_shortcode( $content );
+					} else {
+						$content = apply_shortcodes( $content );
+					}
 
-					$output .= '<div ' . $this->get_atts( $key, $classes, $conditional, $data ) . '>' . do_shortcode( $content ) . '</div>';
+					$output .= '<div ' . $this->get_atts( $key, $classes, $conditional, $data ) . '>' . $content . '</div>';
 					break;
 
 				/* Unlimited Group */
@@ -4102,8 +4117,13 @@ if ( ! class_exists( 'um\core\Fields' ) ) {
 				case 'shortcode':
 
 					$content = str_replace( '{profile_id}', um_profile_id(), $content );
+					if ( version_compare( get_bloginfo('version'),'5.4', '<' ) ) {
+						$content = do_shortcode( $content );
+					} else {
+						$content = apply_shortcodes( $content );
+					}
 
-					$output .= '<div ' . $this->get_atts( $key, $classes, $conditional, $data ) . '>' . do_shortcode( $content ) . '</div>';
+					$output .= '<div ' . $this->get_atts( $key, $classes, $conditional, $data ) . '>' . $content . '</div>';
 					break;
 
 				/* Gap/Space */

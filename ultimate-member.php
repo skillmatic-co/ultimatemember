@@ -1,9 +1,9 @@
 <?php
 /*
-Plugin Name: Ultimate Member
+Plugin Name: Ultimate Member (M)
 Plugin URI: http://ultimatemember.com/
-Description: The easiest way to create powerful online communities and beautiful user profiles with WordPress
-Version: 2.1.6-beta1
+Description: The easiest way to create powerful online communities and beautiful user profiles with WordPress. (Special version with a new multiselect field)
+Version: 2.1.7
 Author: Ultimate Member
 Author URI: http://ultimatemember.com/
 Text Domain: ultimate-member
